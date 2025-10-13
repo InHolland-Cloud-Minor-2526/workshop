@@ -257,6 +257,93 @@ When Openshift creates a new deployments and such the yaml will containt many fi
 
 Strip your yaml file of these fields.
 
+The results should look like:
+
+```
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: fotoshow
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fotoshow
+  template:
+    metadata:
+      labels:
+        app: fotoshow
+    spec:
+      containers:
+        - name: fotoshow
+          image: 'image-registry.openshift-image-registry.svc:5000/sam-sam-showcase/fotoshow@sha256:3353cb84e8a956a5c53f88da2e45153d465b4b7115ff28e80a4c4c4053305c89'
+          ports:
+            - containerPort: 18181
+              protocol: TCP
+          env:
+            - name: SLIDESHOW_EXTERNAL_DIR
+              value: /data
+          volumeMounts:
+            - name: foto-data-volume
+              mountPath: /data
+      volumes:
+        - name: foto-data-volume
+          persistentVolumeClaim:
+            claimName: pvc-foto-show
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: fotoshow
+  namespace: sam-sam-showcase
+  labels:
+    app: fotoshow
+    app.kubernetes.io/component: fotoshow
+    app.kubernetes.io/instance: fotoshow
+    app.kubernetes.io/name: fotoshow
+spec:
+  ports:
+    - name: 18181-tcp
+      protocol: TCP
+      port: 18181
+      targetPort: 18181
+  type: ClusterIP
+  selector:
+    app: fotoshow
+
+---
+
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: fotoshow
+  namespace: sam-sam-showcase
+  labels:
+    app: fotoshow
+    app.kubernetes.io/component: fotoshow
+    app.kubernetes.io/instance: fotoshow
+    app.kubernetes.io/name: fotoshow
+  annotations:
+spec:
+  host: fotoshow-sam-sam-showcase.apps.inholland-minor.openshift.eu
+  to:
+    kind: Service
+    name: fotoshow
+    weight: 100
+  port:
+    targetPort: 18181-tcp
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+
+
+
+```
+ 
+
 now remove the deploymentthe route and the service , or switch to another namespace. Using the oc command and the yaml files we just saved we can create application again by using the oc command.
 ```
 oc apply -f deployment.yaml
@@ -265,17 +352,129 @@ oc apply -f route.yaml
 ```
 Check the application in the web console.
 
+### organizing your deployment repo
+In your deployment repo you can create a folder for each environment. To avoid duplication ArgoCD uses kustomize to handle the differences between environments.
+
+You will setup a base folder with the the common yaml files. 
+You will then create overlays for each environment. In theses overlays you can add or remove or mutate yaml files to match the environment.
+
+In our example we will have a base folder with the deployment.yaml, service.yaml and route.yaml files.
+then create overlays for the test environments.
+
+In the test case we will only deploy the application to the test namespace.
+
+Each directory you point ArgoCD to will need a kustomization.yaml file. For our regular deployment we will point ArgoCD to the base folder.
+
+Then we are going to create another ArgoCD application for the test environment. We will point ArgoCD to the overlay/test folder. In that folder we will add a kustomization.yaml file that points to the base folder. 
+There will also be a rule in the kustomization.yaml file that will apply the deployment to the test namespace.
+
+### kustomize
+
+Kustomize tool is a tool to manipulate yaml files. The most basic usage is to list files and directories to be included in the output.
+```
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment-fotoshow.yaml
+  - route-fotoshow.yaml
+  - service-fotoshow.yaml
+  - pvc-fotoshow.yaml
+
+```
+
+But with kustomize you can also manipulate the yaml files. In our overlays/test folder we include the following kustomization.yaml
+
+```
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+
+namespace: sam-sam-test
+
+resources:
+  - ../../base
+
+```
+
+which includes the base folder and sets the namespace to sam-sam-test.
+
+
+Kustomize can also be used to mutate the yaml files. In our overlays/test folder we could add the following to kustomization.yaml
+
+```
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+bases:
+  - ../../base
+
+patches:
+  - target:
+      kind: Deployment
+      name: my-app
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 5
+```
+
+This will replace the replicas in the deployment.yaml file with 5.
+
 ## ArgoCD
 
 Install kustomize on your laptop
 
-Github accesstokens
-finegrained access
-point naar argocd repo
+In ArgoCD you will need to configure the connection to the ArgoCD repo and the deployment (or applicaton) repo.
+For this you will need Github accesstokens (see below)
 
-nieuwe 
-    resource owner
-    only select repositories
-    add permissions
+In ArgoCD go to Settings -> Applications -> Connections
+add your argocd repo and/or your deployment repo depending on the visibility of the repos. (public/private)
+
+Create a new (ArgoCD) application
+
+```
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: simple-slideshow-base
+spec:
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sam-sam-showcase
+  project: default
+  source:
+    path: simpleSlideShow/base
+    repoURL: https://github.com/InHolland-Cloud-Minor-2526/simpleSlideshow-deploy.git
+    targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+```
+
+Later on we can add more applications. For instance the test application we prepared for in the deployment repo.
+
+In this case the repoUrl will be the same but the path will point to the overlay/test folder.
+
+
+
+---
+## Creating github accesstokens
+In your github account go to settings -> developer settings -> personal access tokens
+Choose:
+   finegrained access
+   If in an organisation select resource owner --> organisation
+   choose for : only select repositories
+   point to the repo you want to connect to
+   Click the add permissions button
+     select Contents: read
+or
+     select Packages: read 
+  Click Create token
+
+Remember to save the token somewhere save(!) It will not be shown again!
+   
 
 
