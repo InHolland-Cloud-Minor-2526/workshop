@@ -432,17 +432,9 @@ In ArgoCD you will need to configure the connection to the ArgoCD repo and the d
 For this you will need Github accesstokens (see below)
 
 
-Add the ArgoCD capabilities to your project in the PaaS.yaml
+Add the ArgoCD capabilities to your project in the PaaS.yaml (make sure the indentation is correct)
 
 
-```
-
-```
-
-In ArgoCD go to Settings -> Applications -> Connections
-add your argocd repo and/or your deployment repo depending on the visibility of the repos. (public/private)
-
-Create a new (ArgoCD) application
 
 ```
 capabilities:
@@ -450,6 +442,40 @@ capabilities:
       custom_fields:
         git_url: 'https://github.com/Myorg/myown-argocd.git'
 ```
+
+
+
+In ArgoCD go to Settings -> Applications -> Connections
+add your argocd repo and/or your deployment repo depending on the visibility of the repos. (public/private)
+
+Create a new (ArgoCD) application 
+
+```
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: simple-slideshow-test
+spec:
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sam-sam-test
+  project: default
+  source:
+    path: simpleSlideShow/overlays/test/
+    repoURL: https://github.com/InHolland-Cloud-Minor-2526/simpleSlideshow-deploy.git
+    targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+```
+
+Make sure to replace the repoURL with the url of your deployment repo. Also the path with the path to the overlay/test folder.
+
+
 
 Later on we can add more applications. For instance the test application we prepared for in the deployment repo.
 
