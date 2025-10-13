@@ -1,5 +1,8 @@
 # Workshop CI/CD for OpenShift
 
+
+by: wim-jan.hilgenbos@hcs-company.com
+
 ## Important links and conventions
 - GitHub InHolland-Cloud-Monor-2526 organisation: https://github.com/InHolland-Cloud-Minor-2526
 - OpenShift cluster: https://inholland-minor.openshift.eu/
@@ -428,30 +431,24 @@ Install kustomize on your laptop
 In ArgoCD you will need to configure the connection to the ArgoCD repo and the deployment (or applicaton) repo.
 For this you will need Github accesstokens (see below)
 
+
+Add the ArgoCD capabilities to your project in the PaaS.yaml
+
+
+```
+
+```
+
 In ArgoCD go to Settings -> Applications -> Connections
 add your argocd repo and/or your deployment repo depending on the visibility of the repos. (public/private)
 
 Create a new (ArgoCD) application
 
 ```
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: simple-slideshow-base
-spec:
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: sam-sam-showcase
-  project: default
-  source:
-    path: simpleSlideShow/base
-    repoURL: https://github.com/InHolland-Cloud-Minor-2526/simpleSlideshow-deploy.git
-    targetRevision: main
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+capabilities:
+    argocd:
+      custom_fields:
+        git_url: 'https://github.com/Myorg/myown-argocd.git'
 ```
 
 Later on we can add more applications. For instance the test application we prepared for in the deployment repo.
