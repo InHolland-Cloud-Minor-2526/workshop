@@ -149,7 +149,7 @@ Each job is a set of steps that are executed in sequence.
 
 Our pipeline only does CI, so it will only create and store and image in the registry. Deployments are handled by ArgoCD.
 
-Setup a pipeline that builds and deploys the application to OpenShift.
+Setup a pipeline that builds an application and its container image and pushes the image to the github registry.
 - You can choose to use a separate repo for you for you pipeline or use the same repo as you used for the application.
   - a separate repo is more purist because the lifecycle of the pipeline is separated from the lifecycle of the application.
   - a separate repo can also be more practical because you can use the same pipeline for multiple applications. 
