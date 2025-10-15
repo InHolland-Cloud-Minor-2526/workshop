@@ -14,6 +14,9 @@ by: wim-jan.hilgenbos@hcs-company.com
   - if not, did you get an email? Check with the instructor.
 - join your team in the GitHub organization
 - Have docker or podman installed on your laptop
+- Have Quarkus installed on your laptop
+  - https://quarkus.io/guides/getting-started#installing-quarkus
+  - https://quarkus.io/guides/getting-started-guide
 - Have an IDE
   - IntelliJ
   - VSCode
